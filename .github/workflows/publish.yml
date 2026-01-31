@@ -140,28 +140,10 @@ jobs:
           TOKEN="${{ steps.generate-token.outputs.token }}"
           echo "Verifying token type..."
           
-          # Installation access token으로 API 호출 테스트
-          # GitHub App installation access token은 Bearer 토큰으로 사용
-          RESPONSE=$(curl -s \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/user" || echo "{}")
-          
-          if echo "$RESPONSE" | grep -q "login"; then
-            echo "✅ Token is valid installation access token"
-            echo "Token can access GitHub API"
-          elif echo "$RESPONSE" | grep -q "Bad credentials"; then
-            echo "❌ Token authentication failed"
-            echo "This might indicate:"
-            echo "  1. GitHub App is not installed on the repository"
-            echo "  2. Token generation failed"
-            echo "Response: $RESPONSE"
-          else
-            echo "⚠️ Unexpected response: $RESPONSE"
-          fi
+          # GitHub App installation access token은 /user 엔드포인트를 사용할 수 없습니다
+          # 대신 레포지토리 접근으로 토큰 유효성을 확인합니다
           
           # 레포지토리 접근 확인
-          echo ""
           echo "Checking repository access..."
           REPO_RESPONSE=$(curl -s \
             -H "Authorization: Bearer $TOKEN" \
@@ -169,16 +151,53 @@ jobs:
             "https://api.github.com/repos/passion-edu/s-class-common" || echo "{}")
           
           if echo "$REPO_RESPONSE" | grep -q "full_name"; then
+            echo "✅ Token is valid installation access token"
             echo "✅ Can access repository: passion-edu/s-class-common"
           else
             echo "❌ Cannot access repository"
+            echo "This might indicate:"
+            echo "  1. GitHub App is not installed on the repository"
+            echo "  2. Token generation failed"
             echo "Response: $REPO_RESPONSE"
+            exit 1
+          fi
+          
+          # Packages 권한 확인
+          echo ""
+          echo "Checking packages access via API..."
+          PACKAGES_RESPONSE=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/orgs/passion-edu/packages?package_type=maven" || echo "{}")
+          
+          if echo "$PACKAGES_RESPONSE" | grep -q "name"; then
+            echo "✅ Can access organization packages via API"
+          elif echo "$PACKAGES_RESPONSE" | grep -q "403\|401"; then
+            echo "❌ Cannot access organization packages (403/401)"
+            echo "⚠️ This indicates missing Packages permission in Repository permissions"
+            echo "Response: $PACKAGES_RESPONSE"
+          else
+            echo "⚠️ Cannot access organization packages or no packages exist"
+            echo "Response: $PACKAGES_RESPONSE"
           fi
       
       - name: Test GitHub Packages access
         run: |
           TOKEN="${{ steps.generate-token.outputs.token }}"
+          
+          # 토큰 확인
+          if [ -z "$TOKEN" ]; then
+            echo "❌ ERROR: GitHub App token is empty!"
+            echo "This should not happen if GitHub App is configured correctly."
+            exit 1
+          fi
+          
+          echo "✅ Using GitHub App installation access token"
+          echo "Token length: $(echo -n "$TOKEN" | wc -c)"
+          echo "Token prefix: $(echo -n "$TOKEN" | cut -c1-10)..."
+          
           URL="${{ env.GITHUB_PACKAGES_URL }}/com/s-class/common-kotlin-lib/maven-metadata.xml"
+          echo ""
           echo "Testing access to: $URL"
           
           # GitHub Packages는 Basic Auth를 사용합니다
@@ -205,15 +224,20 @@ jobs:
             echo ""
             echo "🔍 Troubleshooting steps:"
             echo ""
-            echo "1. Check GitHub App permissions:"
+            echo "1. Check GitHub App permissions (⚠️ 가장 중요!):"
             echo "   - Go to: https://github.com/organizations/passion-edu/settings/apps"
             echo "   - Find your GitHub App"
-            echo "   - Check 'Repository permissions' → 'Packages': Read and write ✅ (필수)"
+            echo "   - Click 'Edit' to modify permissions"
+            echo "   - Check 'Repository permissions' → 'Packages': Read and write ✅ **필수**"
+            echo "   - ⚠️ Repository permissions에 Packages 권한이 없으면 GitHub Packages에 접근할 수 없습니다!"
             echo "   - ⚠️ Note: Organization permissions에 Packages가 없을 수 있습니다 (정상)"
+            echo "   - Save changes and reinstall the app if permissions were changed"
             echo ""
-            echo "2. Check GitHub App installation:"
+            echo "2. Check GitHub App installation (⚠️ 권한 변경 후 재설치 필요!):"
             echo "   - Go to your GitHub App settings"
-            echo "   - Click 'Install App'"
+            echo "   - If you changed permissions, you MUST reinstall the app:"
+            echo "     → Click 'Install App' → Select existing installation → 'Uninstall'"
+            echo "     → Then click 'Install App' again → 'Install'"
             echo "   - Select 's-class-common' repository (or All repositories)"
             echo "   - Click 'Install'"
             echo ""

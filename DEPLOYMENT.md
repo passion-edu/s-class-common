@@ -194,8 +194,12 @@ import com.sclass.common.exception.BusinessException
 throw BusinessException("ERROR_CODE", "Error message")
 
 // Value Object
-import com.sclass.common.domain.UlidValueObject
-class UserId(value: String) : UlidValueObject(value)
+import com.sclass.common.domain.UlidValueObjectCompanion
+class UserId(value: String) {
+    companion object : UlidValueObjectCompanion<UserId> {
+        override fun create(value: String): UserId = UserId(value)
+    }
+}
 ```
 
 ---

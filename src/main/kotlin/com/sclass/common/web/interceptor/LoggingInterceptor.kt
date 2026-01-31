@@ -13,9 +13,9 @@ import org.springframework.web.servlet.ModelAndView
 
 /**
  * HTTP 요청/응답 로깅 인터셉터
- * 
+ *
  * 모든 HTTP 요청과 응답을 구조화된 형식으로 로깅합니다.
- * 
+ *
  * 사용 방법:
  * ```kotlin
  * @Configuration

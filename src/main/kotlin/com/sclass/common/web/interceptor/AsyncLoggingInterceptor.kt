@@ -13,14 +13,14 @@ import java.util.concurrent.Executors
 
 /**
  * 비동기 HTTP 요청/응답 로깅 인터셉터 (Pino 스타일)
- * 
+ *
  * 모든 HTTP 요청과 응답을 비동기로 로깅하여 API 성능에 영향을 주지 않습니다.
- * 
+ *
  * 특징:
  * - 비동기 로깅으로 성능 영향 최소화
  * - 구조화된 JSON 형식 로깅
  * - 프로덕션 환경에서 자동으로 불필요한 로그 제거
- * 
+ *
  * 사용 방법:
  * ```kotlin
  * @Configuration
@@ -38,7 +38,7 @@ class AsyncLoggingInterceptor(
             val thread = Thread(r, "async-logger-${System.currentTimeMillis()}")
             thread.isDaemon = true
             thread
-        }
+        },
     ),
 ) : HandlerInterceptor {
 
@@ -109,7 +109,7 @@ class AsyncLoggingInterceptor(
 
     private fun logRequest(request: HttpServletRequest, requestId: String) {
         val context = buildRequestContext(request, requestId)
-        
+
         // 구조화된 로깅 (JSON 형식으로 출력되도록)
         logger.debug("HTTP Request | {}", formatAsJson(context))
     }
@@ -121,7 +121,7 @@ class AsyncLoggingInterceptor(
         ex: Exception?,
     ) {
         val context = buildResponseContext(request, response, executionTime, ex)
-        
+
         when {
             ex != null || response.status >= 500 -> {
                 // 서버 에러는 항상 로깅

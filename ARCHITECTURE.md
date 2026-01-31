@@ -10,7 +10,7 @@ common-kotlin-lib/
 │   ├── util/          # 유틸리티 (Ulid, PaginationUtils, DateTimeUtils, ValidationUtils, LoggerUtils)
 │   ├── exception/   # 예외 처리 (BusinessException)
 │   ├── dto/         # DTO (ApiResponse, ErrorResponse, PageResponse)
-│   ├── domain/      # 도메인 모델 (UlidValueObject)
+│   ├── domain/      # 도메인 모델 (UlidValueObjectCompanion)
 │   └── web/         # 웹 관련 (GlobalExceptionHandler)
 └── build.gradle.kts
 ```

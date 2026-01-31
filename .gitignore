@@ -29,3 +29,19 @@ out/
 # Local development
 .gradle.properties.local
 local.properties
+
+# ktlint
+.ktlint/
+
+# Build artifacts
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+*.ear
+*.class
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~

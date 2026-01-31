@@ -2,9 +2,9 @@ package com.sclass.common.dto
 
 /**
  * 공통 API 응답 래퍼
- * 
+ *
  * 모든 REST API 응답을 일관된 형식으로 제공합니다.
- * 
+ *
  * @param T 응답 데이터 타입
  * @param success 성공 여부
  * @param data 성공 시 데이터 (실패 시 null)
@@ -39,7 +39,7 @@ data class ApiResponse<T>(
 
 /**
  * 에러 응답 정보
- * 
+ *
  * @param code 에러 코드
  * @param message 에러 메시지
  */

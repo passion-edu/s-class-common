@@ -1,8 +1,8 @@
 package com.sclass.common.web.aspect
 
 import com.sclass.common.util.LoggerUtils
-import com.sclass.common.web.annotation.Loggable
 import com.sclass.common.web.annotation.LogLevel
+import com.sclass.common.web.annotation.Loggable
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
@@ -10,14 +10,13 @@ import org.aspectj.lang.reflect.MethodSignature
 import org.slf4j.Logger
 import org.slf4j.MDC
 import org.springframework.stereotype.Component
-import org.springframework.web.servlet.ModelAndView
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
 /**
  * 비동기 로깅 AOP Aspect (Pino 스타일)
- * 
+ *
  * @Loggable 어노테이션이 붙은 메서드의 자동 로깅을 비동기로 처리합니다.
  * API 성능에 영향을 주지 않도록 비동기 로깅을 사용합니다.
  */
@@ -27,7 +26,7 @@ class AsyncLoggingAspect {
 
     @Suppress("UNCHECKED_CAST")
     private val logger: Logger = LoggerUtils.getLogger(AsyncLoggingAspect::class.java) as Logger
-    
+
     // 비동기 로깅을 위한 Executor (데몬 스레드로 생성)
     private val executor: Executor = Executors.newFixedThreadPool(
         Runtime.getRuntime().availableProcessors(),
@@ -35,7 +34,7 @@ class AsyncLoggingAspect {
             val thread = Thread(r, "async-logger-aspect-${System.currentTimeMillis()}")
             thread.isDaemon = true
             thread
-        }
+        },
     )
 
     @Around("@annotation(loggable) || @within(loggable)")

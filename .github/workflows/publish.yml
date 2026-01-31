@@ -2,8 +2,10 @@ name: Publish Library
 
 on:
   push:
+    branches:
+      - main  # main 브랜치에 push 시 자동 배포 (SNAPSHOT 버전)
     tags:
-      - 'v*'  # v1.0.0, v1.1.0 등 태그 푸시 시 배포
+      - 'v*'  # v1.0.0, v1.1.0 등 태그 푸시 시 배포 (릴리즈 버전)
   workflow_dispatch:  # 수동 실행 가능
     inputs:
       version:
@@ -48,6 +50,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       
+      - name: Lint Check
+        run: ./gradlew ktlintCheck
+        working-directory: common-kotlin-lib
+      
       - name: Build and Test
         run: ./gradlew clean build test
         working-directory: common-kotlin-lib
@@ -56,6 +62,14 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         id: tag
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Extract version from build.gradle.kts (for branch push)
+        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+        id: version_from_file
+        run: |
+          VERSION=$(grep -oP 'version = "\K[^"]+' build.gradle.kts)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        working-directory: common-kotlin-lib
       
       - name: Update version in build.gradle.kts
         if: github.event_name == 'workflow_dispatch'
@@ -88,8 +102,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "Published version: ${{ steps.version.outputs.VERSION }}"
-          else
+          elif startsWith(github.ref, 'refs/tags/'); then
             echo "Published version: ${{ steps.tag.outputs.VERSION }}"
+          else
+            echo "Published version: ${{ steps.version_from_file.outputs.VERSION }}"
           fi
       
       - name: Create Release

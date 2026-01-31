@@ -1,11 +1,8 @@
 package com.sclass.common.web
 
 import com.sclass.common.dto.ApiResponse
-import com.sclass.common.dto.ErrorResponse
 import com.sclass.common.exception.BusinessException
 import com.sclass.common.util.LoggerUtils
-import com.sclass.common.util.errorWithContext
-import com.sclass.common.util.warnWithContext
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.Logger
 import org.slf4j.MDC
@@ -16,9 +13,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 /**
  * 공통 예외 처리 핸들러
- * 
+ *
  * 모든 REST API 컨트롤러에서 발생하는 예외를 일관된 형식으로 처리하고 로깅합니다.
- * 
+ *
  * 사용 방법:
  * ```kotlin
  * @RestControllerAdvice
@@ -35,7 +32,7 @@ open class GlobalExceptionHandler {
 
     /**
      * BusinessException 처리
-     * 
+     *
      * 비즈니스 로직 예외를 400 Bad Request로 처리합니다.
      */
     @ExceptionHandler(BusinessException::class)
@@ -57,7 +54,7 @@ open class GlobalExceptionHandler {
 
     /**
      * IllegalArgumentException 처리
-     * 
+     *
      * 잘못된 인자 예외를 400 Bad Request로 처리합니다.
      */
     @ExceptionHandler(IllegalArgumentException::class)
@@ -79,7 +76,7 @@ open class GlobalExceptionHandler {
 
     /**
      * IllegalStateException 처리
-     * 
+     *
      * 잘못된 상태 예외를 409 Conflict로 처리합니다.
      */
     @ExceptionHandler(IllegalStateException::class)
@@ -101,7 +98,7 @@ open class GlobalExceptionHandler {
 
     /**
      * 일반 RuntimeException 처리
-     * 
+     *
      * 예상치 못한 예외를 500 Internal Server Error로 처리합니다.
      */
     @ExceptionHandler(RuntimeException::class)
@@ -124,7 +121,7 @@ open class GlobalExceptionHandler {
 
     /**
      * 일반 Exception 처리 (최상위 예외)
-     * 
+     *
      * 처리되지 않은 모든 예외를 500 Internal Server Error로 처리합니다.
      */
     @ExceptionHandler(Exception::class)
@@ -147,7 +144,7 @@ open class GlobalExceptionHandler {
 
     /**
      * 구조화된 예외 로깅 (비동기)
-     * 
+     *
      * 예외 로깅을 비동기로 처리하여 API 성능에 영향을 주지 않습니다.
      */
     protected fun logException(

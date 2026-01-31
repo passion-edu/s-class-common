@@ -57,7 +57,7 @@
 - ✅ cause 포함 생성 테스트
 - ✅ null 메시지 처리 테스트
 
-### 6. Value Object 헬퍼 (`UlidValueObjectTest.kt`)
+### 6. Value Object 헬퍼 (`UlidValueObjectCompanionTest.kt`)
 - ✅ of 메서드 테스트 (유효한/유효하지 않은 ULID)
 - ✅ from 메서드 테스트
 - ✅ generate 메서드 테스트

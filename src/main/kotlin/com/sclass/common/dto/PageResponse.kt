@@ -5,9 +5,9 @@ import org.springframework.data.domain.Page
 
 /**
  * 페이지네이션 응답
- * 
+ *
  * Spring Data의 Page를 표준화된 응답 형식으로 변환합니다.
- * 
+ *
  * @param T 페이지 내용 타입
  * @param content 데이터 목록
  * @param page 현재 페이지 번호 (0부터 시작)

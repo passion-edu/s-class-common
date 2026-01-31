@@ -2,13 +2,13 @@ package com.sclass.common.util
 
 /**
  * 검증 유틸리티
- * 
+ *
  * 일반적인 검증 로직을 제공하는 유틸리티입니다.
  */
 object ValidationUtils {
     /**
      * 이메일 형식 검증
-     * 
+     *
      * @param email 검증할 이메일 주소
      * @return 유효한 이메일 형식인 경우 true
      */
@@ -24,9 +24,9 @@ object ValidationUtils {
 
     /**
      * 전화번호 형식 검증 (한국 형식)
-     * 
+     *
      * 010-1234-5678, 01012345678, 02-123-4567 등 형식 지원
-     * 
+     *
      * @param phone 검증할 전화번호
      * @return 유효한 전화번호 형식인 경우 true
      */
@@ -36,13 +36,16 @@ object ValidationUtils {
         }
         // 하이픈 제거 후 숫자만 검증
         val digitsOnly = phone.replace("-", "").replace(" ", "")
-        val phonePattern = Regex("^(010|011|016|017|018|019|02|031|032|033|041|042|043|044|051|052|053|054|055|061|062|063|064)\\d{7,8}$")
+        val phonePattern = Regex(
+            "^(010|011|016|017|018|019|02|031|032|033|041|042|043|044|" +
+                "051|052|053|054|055|061|062|063|064)\\d{7,8}$",
+        )
         return phonePattern.matches(digitsOnly)
     }
 
     /**
      * 문자열이 비어있지 않은지 검증
-     * 
+     *
      * @param value 검증할 문자열
      * @return null이 아니고 공백이 아닌 경우 true
      */
@@ -52,7 +55,7 @@ object ValidationUtils {
 
     /**
      * 문자열 길이 검증
-     * 
+     *
      * @param value 검증할 문자열
      * @param min 최소 길이 (기본값: 0)
      * @param max 최대 길이 (기본값: Int.MAX_VALUE)
@@ -71,7 +74,7 @@ object ValidationUtils {
 
     /**
      * 숫자 범위 검증
-     * 
+     *
      * @param value 검증할 숫자
      * @param min 최소값
      * @param max 최대값
@@ -93,7 +96,7 @@ object ValidationUtils {
 
     /**
      * URL 형식 검증
-     * 
+     *
      * @param url 검증할 URL
      * @return 유효한 URL 형식인 경우 true
      */

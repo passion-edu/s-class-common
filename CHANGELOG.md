@@ -11,7 +11,7 @@
 - ULID 유틸리티 (`Ulid`)
 - 비즈니스 예외 처리 (`BusinessException`)
 - 공통 API 응답 DTO (`ApiResponse`, `ErrorResponse`, `PageResponse`)
-- ULID 기반 Value Object 헬퍼 (`UlidValueObject`)
+- ULID 기반 Value Object 헬퍼 (`UlidValueObjectCompanion`)
 - GlobalExceptionHandler (구조화된 예외 처리 및 로깅)
 - 페이징 유틸리티 (`PaginationUtils`)
 - 날짜/시간 유틸리티 (`DateTimeUtils`)

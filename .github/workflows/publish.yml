@@ -111,22 +111,6 @@ jobs:
           VERSION=$(grep -oP 'version = "\K[^"]+' build.gradle.kts)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
       
-      - name: Verify GitHub App token
-        run: |
-          TOKEN="${{ steps.generate-token.outputs.token }}"
-          if [ -z "$TOKEN" ]; then
-            echo "❌ GitHub App token generation failed!"
-            echo "Please check:"
-            echo "  1. APP_ID variable is set correctly"
-            echo "  2. APP_PRIVATE_KEY secret is set correctly"
-            echo "  3. GitHub App is installed on the repository"
-            exit 1
-          fi
-          echo "✅ GitHub App token generated successfully"
-          echo "Token length: $(echo -n "$TOKEN" | wc -c)"
-          echo "Repository: ${{ env.GITHUB_PACKAGES_URL }}"
-          echo "User: ${{ github.actor }}"
-      
       - name: Verify token and test GitHub Packages access
         run: |
           # Personal Access Token 사용 (GitHub App 대신)
@@ -246,4 +230,4 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}

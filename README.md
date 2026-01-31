@@ -71,19 +71,11 @@ gpr.token=your_github_token
 - **@Loggable**: AOP 기반 메서드 로깅
 - **LoggingInterceptor**: HTTP 요청/응답 로깅
 
-## 📖 문서
-
-- [배포 가이드](DEPLOYMENT.md)
-- [GitHub Packages 설정](GITHUB_PACKAGES_SETUP.md)
-- [로깅 가이드](LOGGING_GUIDE.md)
-- [아키텍처](ARCHITECTURE.md)
-- [성능 최적화](PERFORMANCE_OPTIMIZATION.md)
-- [릴리스 체크리스트](RELEASE_CHECKLIST.md)
-
 ## 🔗 링크
 
 - **GitHub Repository**: [passion-edu/s-class-common](https://github.com/passion-edu/s-class-common)
 - **GitHub Packages**: [maven.pkg.github.com/passion-edu/s-class-common](https://maven.pkg.github.com/passion-edu/s-class-common)
+- **변경 이력**: [CHANGELOG.md](CHANGELOG.md)
 
 ## 📝 라이선스
 

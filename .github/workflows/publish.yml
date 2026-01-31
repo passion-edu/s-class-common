@@ -59,15 +59,17 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           # GitHub Packages 인증 설정 (GitHub App 토큰 사용)
+          # Organization 패키지의 경우 Organization 이름을 username으로 사용
           server-id: github
-          server-username: ${{ github.actor }}
+          server-username: passion-edu
           server-password: ${{ steps.generate-token.outputs.token }}
           settings-path: ${{ github.workspace }}/.m2
       
       - name: Create Gradle properties for authentication
         run: |
           mkdir -p ~/.gradle
-          echo "gpr.user=${{ github.actor }}" >> ~/.gradle/gradle.properties
+          # Organization 패키지의 경우 Organization 이름을 username으로 사용
+          echo "gpr.user=passion-edu" >> ~/.gradle/gradle.properties
           echo "gpr.token=${{ steps.generate-token.outputs.token }}" >> ~/.gradle/gradle.properties
       
       - name: Grant execute permission for gradlew
@@ -131,6 +133,41 @@ jobs:
           echo "Repository: ${{ env.GITHUB_PACKAGES_URL }}"
           echo "User: ${{ github.actor }}"
       
+      - name: Check GitHub App installation and permissions
+        run: |
+          TOKEN="${{ steps.generate-token.outputs.token }}"
+          APP_ID="${{ vars.APP_ID }}"
+          
+          echo "Checking GitHub App installation..."
+          # GitHub App 설치 확인
+          INSTALLATIONS=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/app/installations" || echo "[]")
+          
+          if echo "$INSTALLATIONS" | grep -q "id"; then
+            echo "✅ GitHub App is installed"
+            INSTALLATION_ID=$(echo "$INSTALLATIONS" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+            echo "Installation ID: $INSTALLATION_ID"
+          else
+            echo "❌ GitHub App is NOT installed or token is invalid"
+            echo "Response: $INSTALLATIONS"
+          fi
+          
+          echo ""
+          echo "Checking GitHub App permissions..."
+          APP_INFO=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/app" || echo "{}")
+          
+          if echo "$APP_INFO" | grep -q "permissions"; then
+            echo "✅ GitHub App permissions:"
+            echo "$APP_INFO" | grep -A 20 "permissions" || true
+          else
+            echo "⚠️ Could not retrieve app permissions"
+          fi
+      
       - name: Test GitHub Packages access
         run: |
           TOKEN="${{ steps.generate-token.outputs.token }}"
@@ -138,20 +175,49 @@ jobs:
           echo "Testing access to: $URL"
           
           # GitHub Packages는 Basic Auth를 사용합니다
+          # Organization 패키지의 경우 username을 Organization 이름으로 시도
+          echo "Trying with organization name: passion-edu"
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -u "${{ github.actor }}:$TOKEN" \
+            -u "passion-edu:$TOKEN" \
             "$URL" || echo "000")
-          echo "HTTP Status Code: $HTTP_CODE"
+          echo "HTTP Status Code (with org name): $HTTP_CODE"
+          
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "404" ]; then
+            echo ""
+            echo "Trying with username: ${{ github.actor }}"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+              -u "${{ github.actor }}:$TOKEN" \
+              "$URL" || echo "000")
+            echo "HTTP Status Code (with username): $HTTP_CODE"
+          fi
           
           if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "404" ]; then
             echo "✅ Authentication successful (404 is OK for new packages)"
           elif [ "$HTTP_CODE" = "401" ]; then
             echo "❌ Authentication failed (401 = Unauthorized)"
             echo ""
-            echo "Please check:"
-            echo "  1. GitHub App has 'Packages: Read and write' permission"
-            echo "  2. GitHub App is installed on the repository"
-            echo "  3. Organization package permissions allow GitHub App access"
+            echo "🔍 Troubleshooting steps:"
+            echo ""
+            echo "1. Check GitHub App permissions:"
+            echo "   - Go to: https://github.com/organizations/passion-edu/settings/apps"
+            echo "   - Find your GitHub App"
+            echo "   - Check 'Repository permissions' → 'Packages': Read and write ✅ (필수)"
+            echo "   - ⚠️ Note: Organization permissions에 Packages가 없을 수 있습니다 (정상)"
+            echo ""
+            echo "2. Check GitHub App installation:"
+            echo "   - Go to your GitHub App settings"
+            echo "   - Click 'Install App'"
+            echo "   - Select 's-class-common' repository (or All repositories)"
+            echo "   - Click 'Install'"
+            echo ""
+            echo "3. Check Organization package permissions:"
+            echo "   - Go to: https://github.com/organizations/passion-edu/settings/packages"
+            echo "   - Ensure package creation is allowed"
+            echo ""
+            echo "4. Try using organization name instead of username:"
+            echo "   Current user: ${{ github.actor }}"
+            echo "   Organization: passion-edu"
+            echo "   GitHub Packages는 Organization 이름을 username으로 사용할 수 있습니다"
             exit 1
           else
             echo "⚠️ Unexpected status code: $HTTP_CODE"
@@ -161,15 +227,15 @@ jobs:
         run: |
           echo "Publishing with GitHub App token:"
           echo "  URL: ${{ env.GITHUB_PACKAGES_URL }}"
-          echo "  User: ${{ github.actor }}"
+          echo "  User: passion-edu (organization name)"
           echo ""
           ./gradlew publish \
             -Pgithub.packages.url=${{ env.GITHUB_PACKAGES_URL }} \
-            -Pgpr.user=${{ github.actor }} \
+            -Pgpr.user=passion-edu \
             -Pgpr.token=${{ steps.generate-token.outputs.token }}
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_ACTOR: passion-edu
       
       - name: Output published version
         run: |

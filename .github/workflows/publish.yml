@@ -206,7 +206,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "Published version: ${{ steps.version.outputs.VERSION }}"
-          elif startsWith(github.ref, 'refs/tags/'); then
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             echo "Published version: ${{ steps.tag.outputs.VERSION }}"
           else
             echo "Published version: ${{ steps.version_from_file.outputs.VERSION }}"

@@ -127,11 +127,19 @@ publishing {
                 withXml {
                     val root = asNode()
                     // dependencies 노드 찾기 또는 생성
-                    var dependenciesNode = root["dependencies"]?.firstOrNull() as? groovy.util.Node
-                    if (dependenciesNode == null) {
-                        dependenciesNode = root.appendNode("dependencies")
+                    // root.get()은 NodeList를 반환할 수 있으므로 첫 번째 요소를 가져옴
+                    val dependenciesList = root.get("dependencies")
+                    val dependenciesNode: groovy.util.Node = when {
+                        dependenciesList is groovy.util.NodeList && dependenciesList.size() > 0 -> {
+                            dependenciesList[0] as groovy.util.Node
+                        }
+                        dependenciesList is groovy.util.Node -> {
+                            dependenciesList
+                        }
+                        else -> {
+                            root.appendNode("dependencies")
+                        }
                     }
-                    val dependencies = dependenciesNode
 
                     // compileOnly 의존성을 optional로 추가
                     val optionalDeps = listOf(
@@ -179,7 +187,7 @@ publishing {
                     )
 
                     optionalDeps.forEach { (groupId, artifactId, version) ->
-                        val dep = dependencies.appendNode("dependency")
+                        val dep = dependenciesNode.appendNode("dependency")
                         dep.appendNode("groupId", groupId)
                         dep.appendNode("artifactId", artifactId)
                         dep.appendNode("version", version)

@@ -130,7 +130,7 @@ publishing {
                     // root.get()은 NodeList를 반환할 수 있으므로 첫 번째 요소를 가져옴
                     val dependenciesList = root.get("dependencies")
                     val dependenciesNode: groovy.util.Node = when {
-                        dependenciesList is groovy.util.NodeList && dependenciesList.size() > 0 -> {
+                        dependenciesList is groovy.util.NodeList && dependenciesList.size > 0 -> {
                             dependenciesList[0] as groovy.util.Node
                         }
                         dependenciesList is groovy.util.Node -> {

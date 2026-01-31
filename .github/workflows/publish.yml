@@ -30,35 +30,45 @@ jobs:
         with:
           fetch-depth: 0
       
+      - name: Check GitHub App configuration
+        id: check-app
+        run: |
+          if [ -z "${{ vars.APP_ID }}" ]; then
+            echo "❌ APP_ID variable is NOT set"
+            echo "Please set up GitHub App (see docs/SETUP_QUICK_START.md)"
+            exit 1
+          fi
+          if [ -z "${{ secrets.APP_PRIVATE_KEY }}" ]; then
+            echo "❌ APP_PRIVATE_KEY secret is NOT set"
+            echo "Please set up GitHub App (see docs/SETUP_QUICK_START.md)"
+            exit 1
+          fi
+          echo "✅ GitHub App configuration found"
+          echo "APP_ID=${{ vars.APP_ID }}" >> $GITHUB_OUTPUT
+
       - name: Generate GitHub App Token
         id: generate-token
         uses: actions/create-github-app-token@v2
-        continue-on-error: true
-        if: vars.APP_ID != ''
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Set token output
-        id: token-output
-        run: |
-          if [ -n "${{ steps.generate-token.outputs.token }}" ]; then
-            echo "token=${{ steps.generate-token.outputs.token }}" >> $GITHUB_OUTPUT
-          else
-            echo "token=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_OUTPUT
-          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          # GitHub Packages 인증 설정
-          # GitHub App 토큰이 있으면 사용, 없으면 GITHUB_TOKEN 사용
+          # GitHub Packages 인증 설정 (GitHub App 토큰 사용)
           server-id: github
           server-username: ${{ github.actor }}
-          server-password: ${{ steps.token-output.outputs.token }}
+          server-password: ${{ steps.generate-token.outputs.token }}
           settings-path: ${{ github.workspace }}/.m2
+      
+      - name: Create Gradle properties for authentication
+        run: |
+          mkdir -p ~/.gradle
+          echo "gpr.user=${{ github.actor }}" >> ~/.gradle/gradle.properties
+          echo "gpr.token=${{ steps.generate-token.outputs.token }}" >> ~/.gradle/gradle.properties
       
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -105,14 +115,60 @@ jobs:
           VERSION=$(grep -oP 'version = "\K[^"]+' build.gradle.kts)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
       
+      - name: Verify GitHub App token
+        run: |
+          TOKEN="${{ steps.generate-token.outputs.token }}"
+          if [ -z "$TOKEN" ]; then
+            echo "❌ GitHub App token generation failed!"
+            echo "Please check:"
+            echo "  1. APP_ID variable is set correctly"
+            echo "  2. APP_PRIVATE_KEY secret is set correctly"
+            echo "  3. GitHub App is installed on the repository"
+            exit 1
+          fi
+          echo "✅ GitHub App token generated successfully"
+          echo "Token length: $(echo -n "$TOKEN" | wc -c)"
+          echo "Repository: ${{ env.GITHUB_PACKAGES_URL }}"
+          echo "User: ${{ github.actor }}"
+      
+      - name: Test GitHub Packages access
+        run: |
+          TOKEN="${{ steps.generate-token.outputs.token }}"
+          URL="${{ env.GITHUB_PACKAGES_URL }}/com/s-class/common-kotlin-lib/maven-metadata.xml"
+          echo "Testing access to: $URL"
+          
+          # GitHub Packages는 Basic Auth를 사용합니다
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -u "${{ github.actor }}:$TOKEN" \
+            "$URL" || echo "000")
+          echo "HTTP Status Code: $HTTP_CODE"
+          
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "404" ]; then
+            echo "✅ Authentication successful (404 is OK for new packages)"
+          elif [ "$HTTP_CODE" = "401" ]; then
+            echo "❌ Authentication failed (401 = Unauthorized)"
+            echo ""
+            echo "Please check:"
+            echo "  1. GitHub App has 'Packages: Read and write' permission"
+            echo "  2. GitHub App is installed on the repository"
+            echo "  3. Organization package permissions allow GitHub App access"
+            exit 1
+          else
+            echo "⚠️ Unexpected status code: $HTTP_CODE"
+          fi
+      
       - name: Publish to GitHub Packages
         run: |
+          echo "Publishing with GitHub App token:"
+          echo "  URL: ${{ env.GITHUB_PACKAGES_URL }}"
+          echo "  User: ${{ github.actor }}"
+          echo ""
           ./gradlew publish \
             -Pgithub.packages.url=${{ env.GITHUB_PACKAGES_URL }} \
             -Pgpr.user=${{ github.actor }} \
-            -Pgpr.token=${{ steps.token-output.outputs.token }}
+            -Pgpr.token=${{ steps.generate-token.outputs.token }}
         env:
-          GITHUB_TOKEN: ${{ steps.token-output.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
           GITHUB_ACTOR: ${{ github.actor }}
       
       - name: Output published version
@@ -143,4 +199,4 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ steps.token-output.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}

@@ -75,10 +75,11 @@ jobs:
           echo "Publishing version: $VERSION"
       
       - name: Publish to GitHub Packages
-        run: ./gradlew publish \
-          -Pgithub.packages.url=${{ env.GITHUB_PACKAGES_URL }} \
-          -Pgpr.user=${{ env.GITHUB_ACTOR }} \
-          -Pgpr.token=${{ env.GITHUB_TOKEN }}
+        run: |
+          ./gradlew publish \
+            -Pgithub.packages.url=${{ env.GITHUB_PACKAGES_URL }} \
+            -Pgpr.user=${{ env.GITHUB_ACTOR }} \
+            -Pgpr.token=${{ env.GITHUB_TOKEN }}
       
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')

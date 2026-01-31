@@ -54,6 +54,56 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: passion-edu
           repositories: s-class-common
+      
+      - name: Diagnose GitHub App permissions
+        if: always()
+        run: |
+          TOKEN="${{ steps.generate-token.outputs.token }}"
+          APP_ID="${{ vars.APP_ID }}"
+          
+          echo "🔍 GitHub App 진단 시작..."
+          echo "App ID: $APP_ID"
+          echo ""
+          
+          # GitHub App 정보 조회 (JWT 필요하지만, installation access token으로는 제한적)
+          # 대신 설치 정보 확인
+          echo "Checking GitHub App installation..."
+          INSTALLATION_RESPONSE=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/app/installations" || echo "[]")
+          
+          if echo "$INSTALLATION_RESPONSE" | grep -q "id"; then
+            echo "✅ GitHub App is installed"
+            echo ""
+            echo "⚠️ 다음 사항을 수동으로 확인하세요:"
+            echo ""
+            echo "1. GitHub App의 Repository permissions 확인:"
+            echo "   → https://github.com/organizations/passion-edu/settings/apps"
+            echo "   → 's-class-package-publisher' 선택 → 'Edit' 클릭"
+            echo "   → 'Repository permissions' 섹션 확인"
+            echo "   → 'Packages'가 'Read and write'로 설정되어 있는지 확인 ✅"
+            echo ""
+            echo "2. GitHub App 설치 확인:"
+            echo "   → GitHub App 설정 페이지 → 'Install App' 클릭"
+            echo "   → 's-class-common' 레포지토리가 설치 목록에 있는지 확인"
+            echo ""
+            echo "3. 권한 변경 후 재설치:"
+            echo "   → 권한을 변경했다면 반드시 재설치 필요!"
+            echo "   → 기존 설치 제거 → 재설치"
+          else
+            echo "⚠️ GitHub App installation 정보를 가져올 수 없습니다"
+            echo "   이는 정상일 수 있습니다 (installation access token 제한)"
+            echo ""
+            echo "📋 수동 확인 체크리스트:"
+            echo ""
+            echo "1. Repository permissions → Packages: Read and write ✅"
+            echo "2. GitHub App이 s-class-common에 설치되어 있음"
+            echo "3. 권한 변경 후 재설치 완료"
+          fi
+          
+          echo ""
+          echo "📖 상세 가이드: docs/SETUP_QUICK_START.md 참고"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -139,9 +189,10 @@ jobs:
         run: |
           TOKEN="${{ steps.generate-token.outputs.token }}"
           echo "Verifying token type..."
-          
-          # GitHub App installation access token은 /user 엔드포인트를 사용할 수 없습니다
-          # 대신 레포지토리 접근으로 토큰 유효성을 확인합니다
+          echo ""
+          echo "ℹ️ Note: GitHub App installation access token은 /user 엔드포인트를 사용할 수 없습니다 (정상 동작)"
+          echo "   대신 레포지토리 접근으로 토큰 유효성을 확인합니다."
+          echo ""
           
           # 레포지토리 접근 확인
           echo "Checking repository access..."
@@ -173,12 +224,14 @@ jobs:
           if echo "$PACKAGES_RESPONSE" | grep -q "name"; then
             echo "✅ Can access organization packages via API"
           elif echo "$PACKAGES_RESPONSE" | grep -q "403\|401"; then
-            echo "❌ Cannot access organization packages (403/401)"
-            echo "⚠️ This indicates missing Packages permission in Repository permissions"
-            echo "Response: $PACKAGES_RESPONSE"
+            echo "⚠️ Cannot access organization packages via API (403/401)"
+            echo "   This might indicate missing Packages permission in Repository permissions"
+            echo "   However, this check is not definitive - the actual test is in the next step"
+            echo "   Response: $PACKAGES_RESPONSE"
           else
-            echo "⚠️ Cannot access organization packages or no packages exist"
-            echo "Response: $PACKAGES_RESPONSE"
+            echo "ℹ️ Cannot access organization packages via API or no packages exist yet"
+            echo "   This is OK - the actual authentication test is in the next step"
+            echo "   Response: $PACKAGES_RESPONSE"
           fi
       
       - name: Test GitHub Packages access
@@ -221,6 +274,8 @@ jobs:
             echo "✅ Authentication successful (404 is OK for new packages)"
           elif [ "$HTTP_CODE" = "401" ]; then
             echo "❌ Authentication failed (401 = Unauthorized)"
+            echo ""
+            echo "⚠️ This is the actual problem - not the /user endpoint 403 (which is normal)"
             echo ""
             echo "🔍 Troubleshooting steps:"
             echo ""

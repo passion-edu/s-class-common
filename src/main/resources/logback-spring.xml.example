@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Logback 설정 예시 (Pino 스타일 JSON 로깅)
+    
+    이 파일을 logback-spring.xml로 복사하여 사용하세요.
+    프로덕션 환경에서 구조화된 JSON 로깅을 사용할 수 있습니다.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- JSON 로깅을 위한 Encoder (logstash-logback-encoder 사용) -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"service":"${spring.application.name:-unknown}"}</customFields>
+            <includeContext>true</includeContext>
+            <includeMdc>true</includeMdc>
+            <includeCallerData>false</includeCallerData>
+        </encoder>
+    </appender>
+
+    <!-- 비동기 로깅 (성능 최적화) -->
+    <appender name="ASYNC_JSON_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="JSON_CONSOLE"/>
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <includeCallerData>false</includeCallerData>
+    </appender>
+
+    <!-- 개발 환경용 일반 로깅 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{requestId}] [%X{method}] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 프로덕션 환경에서는 JSON 로깅 사용 -->
+    <springProfile name="prod,production">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_JSON_CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- 개발 환경에서는 일반 로깅 사용 -->
+    <springProfile name="!prod,!production">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- 공통 라이브러리 로깅 레벨 -->
+    <logger name="com.sclass.common" level="INFO"/>
+    <logger name="com.sclass.common.web.aspect" level="DEBUG"/>
+    <logger name="com.sclass.common.web.interceptor" level="DEBUG"/>
+</configuration>

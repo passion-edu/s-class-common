@@ -1,0 +1,47 @@
+[versions]
+# ULID
+ulid-creator = "5.2.3"
+
+# Spring (선택적 의존성)
+spring-data-commons = "3.2.0"
+spring-web = "6.1.5"
+spring-webmvc = "6.1.5"
+spring-aop = "6.1.5"
+spring-context = "6.1.5"
+swagger-annotations = "2.2.22"
+
+# Servlet (선택적 의존성)
+jakarta-servlet-api = "6.0.0"
+
+# Logging (선택적 의존성)
+slf4j-api = "2.0.9"
+
+# Test
+junit-jupiter = "5.10.0"
+junit-platform = "1.10.0"
+mockito-kotlin = "5.2.1"
+
+[libraries]
+# 필수 의존성
+ulid-creator = { module = "com.github.f4b6a3:ulid-creator", version.ref = "ulid-creator" }
+
+# 선택적 의존성
+spring-data-commons = { module = "org.springframework.data:spring-data-commons", version.ref = "spring-data-commons" }
+spring-web = { module = "org.springframework:spring-web", version.ref = "spring-web" }
+spring-webmvc = { module = "org.springframework:spring-webmvc", version.ref = "spring-webmvc" }
+spring-aop = { module = "org.springframework:spring-aop", version.ref = "spring-aop" }
+spring-context = { module = "org.springframework:spring-context", version.ref = "spring-context" }
+swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "swagger-annotations" }
+jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api", version.ref = "jakarta-servlet-api" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j-api" }
+aspectj-weaver = { module = "org.aspectj:aspectjweaver", version = "1.9.20.1" }
+
+# Test
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+junit-platform-suite-api = { module = "org.junit.platform:junit-platform-suite-api", version.ref = "junit-platform" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+junit-platform-suite-engine = { module = "org.junit.platform:junit-platform-suite-engine", version.ref = "junit-platform" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
+
+[bundles]
+test-junit = ["junit-jupiter", "junit-platform-suite-api"]

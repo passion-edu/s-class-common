@@ -1,0 +1,113 @@
+name: Publish Library
+
+on:
+  push:
+    tags:
+      - 'v*'  # v1.0.0, v1.1.0 등 태그 푸시 시 배포
+  workflow_dispatch:  # 수동 실행 가능
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+
+env:
+  # Organization: passion-edu
+  # Repository: s-class-common
+  GITHUB_PACKAGES_URL: https://maven.pkg.github.com/passion-edu/s-class-common
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+        working-directory: common-kotlin-lib
+      
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('common-kotlin-lib/**/*.gradle*', 'common-kotlin-lib/gradle/**') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      
+      - name: Build and Test
+        run: ./gradlew clean build test
+        working-directory: common-kotlin-lib
+      
+      - name: Extract version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        id: tag
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Update version in build.gradle.kts
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          sed -i.bak "s/version = \".*\"/version = \"$VERSION\"/" build.gradle.kts
+          rm -f build.gradle.kts.bak
+        working-directory: common-kotlin-lib
+      
+      - name: Extract version from build.gradle.kts
+        if: github.event_name == 'workflow_dispatch'
+        id: version
+        run: |
+          VERSION=$(grep -oP 'version = "\K[^"]+' build.gradle.kts)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        working-directory: common-kotlin-lib
+      
+      - name: Publish to GitHub Packages
+        run: |
+          ./gradlew publish \
+            -Pgithub.packages.url=${{ env.GITHUB_PACKAGES_URL }} \
+            -Pgpr.user=${{ github.actor }} \
+            -Pgpr.token=${{ secrets.GITHUB_TOKEN }}
+        working-directory: common-kotlin-lib
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+      
+      - name: Output published version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Published version: ${{ steps.version.outputs.VERSION }}"
+          else
+            echo "Published version: ${{ steps.tag.outputs.VERSION }}"
+          fi
+      
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.tag.outputs.VERSION }}
+          body: |
+            ## Changes
+            See [CHANGELOG.md](../../CHANGELOG.md) for details.
+            
+            ## Installation
+            ```kotlin
+            dependencies {
+                implementation("com.s-class:common-kotlin-lib:${{ steps.tag.outputs.VERSION }}")
+            }
+            ```
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

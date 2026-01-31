@@ -126,11 +126,12 @@ publishing {
                 // 수동으로 optional dependency로 추가
                 withXml {
                     val root = asNode()
-                    var dependenciesNode = root.get("dependencies")
+                    // dependencies 노드 찾기 또는 생성
+                    var dependenciesNode = root["dependencies"]?.firstOrNull() as? groovy.util.Node
                     if (dependenciesNode == null) {
                         dependenciesNode = root.appendNode("dependencies")
                     }
-                    val dependencies = dependenciesNode as groovy.util.Node
+                    val dependencies = dependenciesNode
 
                     // compileOnly 의존성을 optional로 추가
                     val optionalDeps = listOf(

@@ -65,8 +65,7 @@ jobs:
           echo "App ID: $APP_ID"
           echo ""
           
-          # GitHub App 정보 조회 (JWT 필요하지만, installation access token으로는 제한적)
-          # 대신 설치 정보 확인
+          # 설치 정보 확인
           echo "Checking GitHub App installation..."
           INSTALLATION_RESPONSE=$(curl -s \
             -H "Authorization: Bearer $TOKEN" \
@@ -75,33 +74,43 @@ jobs:
           
           if echo "$INSTALLATION_RESPONSE" | grep -q "id"; then
             echo "✅ GitHub App is installed"
+            
+            # 설치된 레포지토리 확인
             echo ""
-            echo "⚠️ 다음 사항을 수동으로 확인하세요:"
-            echo ""
-            echo "1. GitHub App의 Repository permissions 확인:"
-            echo "   → https://github.com/organizations/passion-edu/settings/apps"
-            echo "   → 's-class-package-publisher' 선택 → 'Edit' 클릭"
-            echo "   → 'Repository permissions' 섹션 확인"
-            echo "   → 'Packages'가 'Read and write'로 설정되어 있는지 확인 ✅"
-            echo ""
-            echo "2. GitHub App 설치 확인:"
-            echo "   → GitHub App 설정 페이지 → 'Install App' 클릭"
-            echo "   → 's-class-common' 레포지토리가 설치 목록에 있는지 확인"
-            echo ""
-            echo "3. 권한 변경 후 재설치:"
-            echo "   → 권한을 변경했다면 반드시 재설치 필요!"
-            echo "   → 기존 설치 제거 → 재설치"
+            echo "Checking installed repositories..."
+            REPOS_RESPONSE=$(curl -s \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/installation/repositories" || echo "{}")
+            
+            if echo "$REPOS_RESPONSE" | grep -q "s-class-common"; then
+              echo "✅ s-class-common repository is accessible"
+            else
+              echo "⚠️ s-class-common repository might not be in the installation"
+              echo "Response: $REPOS_RESPONSE"
+            fi
           else
             echo "⚠️ GitHub App installation 정보를 가져올 수 없습니다"
             echo "   이는 정상일 수 있습니다 (installation access token 제한)"
-            echo ""
-            echo "📋 수동 확인 체크리스트:"
-            echo ""
-            echo "1. Repository permissions → Packages: Read and write ✅"
-            echo "2. GitHub App이 s-class-common에 설치되어 있음"
-            echo "3. 권한 변경 후 재설치 완료"
           fi
           
+          echo ""
+          echo "📋 수동 확인 체크리스트 (⚠️ 반드시 확인하세요!):"
+          echo ""
+          echo "1. GitHub App의 Repository permissions 확인:"
+          echo "   → https://github.com/organizations/passion-edu/settings/apps"
+          echo "   → 's-class-package-publisher' 선택 → 'Edit' 클릭"
+          echo "   → 'Repository permissions' 섹션으로 스크롤"
+          echo "   → 'Packages' 드롭다운 확인 → 'Read and write'로 설정되어 있어야 함 ✅"
+          echo "   → ⚠️ 이것이 가장 흔한 원인입니다!"
+          echo ""
+          echo "2. GitHub App 설치 확인:"
+          echo "   → GitHub App 설정 페이지 → 'Install App' 클릭"
+          echo "   → 's-class-common' 레포지토리가 설치 목록에 있는지 확인"
+          echo ""
+          echo "3. 권한 변경 후 재설치 (⚠️ 필수!):"
+          echo "   → 권한을 변경했다면 반드시 재설치 필요!"
+          echo "   → 기존 설치 제거 (Uninstall) → 재설치 (Install)"
           echo ""
           echo "📖 상세 가이드: docs/SETUP_QUICK_START.md 참고"
 
@@ -252,58 +261,107 @@ jobs:
           URL="${{ env.GITHUB_PACKAGES_URL }}/com/s-class/common-kotlin-lib/maven-metadata.xml"
           echo ""
           echo "Testing access to: $URL"
+          echo ""
           
-          # GitHub Packages는 Basic Auth를 사용합니다
-          # Organization 패키지의 경우 username을 Organization 이름으로 시도
+          # GitHub App installation access token을 사용할 때는 특별한 형식이 필요할 수 있습니다
+          # GitHub Packages Basic Auth는 username에 특정 값을 요구할 수 있습니다
+          
+          # 방법 1: Organization 이름 사용
+          echo "🔍 Method 1: Using organization name as username"
           echo "Trying with organization name: passion-edu"
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+          HTTP_CODE1=$(curl -s -o /dev/null -w "%{http_code}" \
             -u "passion-edu:$TOKEN" \
-            "$URL" || echo "000")
-          echo "HTTP Status Code (with org name): $HTTP_CODE"
+            "$URL" 2>&1 || echo "000")
+          echo "HTTP Status Code (with org name): $HTTP_CODE1"
           
-          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "404" ]; then
+          # 방법 2: GitHub App의 경우 username을 특별한 형식으로 시도
+          # GitHub App installation access token은 때때로 username을 특정 형식으로 요구합니다
+          echo ""
+          echo "🔍 Method 2: Using x-access-token format (if supported)"
+          HTTP_CODE2=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token $TOKEN" \
+            "$URL" 2>&1 || echo "000")
+          echo "HTTP Status Code (with token header): $HTTP_CODE2"
+          
+          # 방법 3: Bearer token 형식
+          echo ""
+          echo "🔍 Method 3: Using Bearer token format"
+          HTTP_CODE3=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $TOKEN" \
+            "$URL" 2>&1 || echo "000")
+          echo "HTTP Status Code (with Bearer): $HTTP_CODE3"
+          
+          # 방법 4: 사용자명 사용
+          if [ "$HTTP_CODE1" != "200" ] && [ "$HTTP_CODE1" != "404" ]; then
             echo ""
+            echo "🔍 Method 4: Using actor username"
             echo "Trying with username: ${{ github.actor }}"
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            HTTP_CODE4=$(curl -s -o /dev/null -w "%{http_code}" \
               -u "${{ github.actor }}:$TOKEN" \
-              "$URL" || echo "000")
-            echo "HTTP Status Code (with username): $HTTP_CODE"
+              "$URL" 2>&1 || echo "000")
+            echo "HTTP Status Code (with username): $HTTP_CODE4"
+            HTTP_CODE="$HTTP_CODE4"
+          else
+            HTTP_CODE="$HTTP_CODE1"
+          fi
+          
+          # 가장 성공한 방법 사용
+          if [ "$HTTP_CODE1" = "200" ] || [ "$HTTP_CODE1" = "404" ]; then
+            HTTP_CODE="$HTTP_CODE1"
+          elif [ "$HTTP_CODE2" = "200" ] || [ "$HTTP_CODE2" = "404" ]; then
+            HTTP_CODE="$HTTP_CODE2"
+          elif [ "$HTTP_CODE3" = "200" ] || [ "$HTTP_CODE3" = "404" ]; then
+            HTTP_CODE="$HTTP_CODE3"
           fi
           
           if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "404" ]; then
+            echo ""
             echo "✅ Authentication successful (404 is OK for new packages)"
           elif [ "$HTTP_CODE" = "401" ]; then
+            echo ""
             echo "❌ Authentication failed (401 = Unauthorized)"
             echo ""
             echo "⚠️ This is the actual problem - not the /user endpoint 403 (which is normal)"
             echo ""
-            echo "🔍 Troubleshooting steps:"
+            echo "🔍 상세 진단:"
             echo ""
-            echo "1. Check GitHub App permissions (⚠️ 가장 중요!):"
+            echo "가능한 원인:"
+            echo "1. GitHub App의 Repository permissions에 Packages 권한이 없음 ⚠️ 가장 흔한 원인"
+            echo "2. 권한을 변경했지만 GitHub App을 재설치하지 않음"
+            echo "3. GitHub App이 레포지토리에 설치되지 않음"
+            echo "4. Organization의 패키지 설정 문제"
+            echo ""
+            echo "🔧 해결 방법:"
+            echo ""
+            echo "1. GitHub App permissions 확인 (⚠️ 가장 중요!):"
             echo "   - Go to: https://github.com/organizations/passion-edu/settings/apps"
-            echo "   - Find your GitHub App"
+            echo "   - Find 's-class-package-publisher' GitHub App"
             echo "   - Click 'Edit' to modify permissions"
-            echo "   - Check 'Repository permissions' → 'Packages': Read and write ✅ **필수**"
+            echo "   - Scroll to 'Repository permissions' section"
+            echo "   - Check 'Packages' dropdown → Must be 'Read and write' ✅ **필수**"
             echo "   - ⚠️ Repository permissions에 Packages 권한이 없으면 GitHub Packages에 접근할 수 없습니다!"
             echo "   - ⚠️ Note: Organization permissions에 Packages가 없을 수 있습니다 (정상)"
-            echo "   - Save changes and reinstall the app if permissions were changed"
+            echo "   - Click 'Update GitHub App' at the bottom"
             echo ""
-            echo "2. Check GitHub App installation (⚠️ 권한 변경 후 재설치 필요!):"
-            echo "   - Go to your GitHub App settings"
-            echo "   - If you changed permissions, you MUST reinstall the app:"
-            echo "     → Click 'Install App' → Select existing installation → 'Uninstall'"
-            echo "     → Then click 'Install App' again → 'Install'"
-            echo "   - Select 's-class-common' repository (or All repositories)"
-            echo "   - Click 'Install'"
+            echo "2. GitHub App 재설치 (⚠️ 권한 변경 후 필수!):"
+            echo "   - GitHub App 설정 페이지에서 'Install App' 클릭"
+            echo "   - 기존 설치가 있다면:"
+            echo "     → 설치 목록에서 선택"
+            echo "     → 'Uninstall' 클릭"
+            echo "   - 'Install App' 버튼 클릭"
+            echo "   - 'Select repositories'에서 's-class-common' 선택 (또는 All repositories)"
+            echo "   - 'Install' 클릭"
+            echo "   - ⚠️ 권한을 변경한 경우 반드시 재설치해야 합니다!"
             echo ""
-            echo "3. Check Organization package permissions:"
+            echo "3. Organization package permissions 확인:"
             echo "   - Go to: https://github.com/organizations/passion-edu/settings/packages"
-            echo "   - Ensure package creation is allowed"
+            echo "   - Ensure package creation is allowed for organization members"
             echo ""
-            echo "4. Try using organization name instead of username:"
-            echo "   Current user: ${{ github.actor }}"
-            echo "   Organization: passion-edu"
-            echo "   GitHub Packages는 Organization 이름을 username으로 사용할 수 있습니다"
+            echo "4. GitHub App 설치 확인:"
+            echo "   - GitHub App 설정 페이지 → 'Install App'"
+            echo "   - 's-class-common' 레포지토리가 설치 목록에 있는지 확인"
+            echo ""
+            echo "📖 상세 가이드: docs/SETUP_QUICK_START.md 참고"
             exit 1
           else
             echo "⚠️ Unexpected status code: $HTTP_CODE"
